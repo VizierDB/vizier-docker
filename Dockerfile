@@ -95,7 +95,7 @@ ENV API_LOCAL_PORT=5000
 
 #write startup scripts
 #mimir
-RUN echo "(cd /usr/local/source/mimir; /usr/local/source/sbt/bin/sbt runMimirVizier)" >> /usr/local/source/run_mimir.sh \
+RUN echo "(cd /usr/local/source/mimir; /usr/local/source/sbt/bin/sbt runMimirVizier -X LOG)" >> /usr/local/source/run_mimir.sh \
  && chmod 0755 /usr/local/source/run_mimir.sh
 #api
 RUN echo "(sleep 40 && cd /usr/local/source/web-api && source /opt/conda/bin/activate vizier && cd vizier && python server.py)" >> /usr/local/source/run_web_api.sh \
