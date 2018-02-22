@@ -26,5 +26,5 @@ $ docker build <path/where/dockerfile/is/cloned> --build-arg gituser=<your_vizie
 
 ##### Note: when running or building this docker image make sure that docker has at minimum 2.2 GB of memory allocated, otherwise it will fail.
 
-##### Note: this is not intended to be a production image.  it is for rapid setup of stack for dev/testing
+##### Note: this is not intended to be a production image.  it is for rapid setup of stack for demo/dev/testing
 
