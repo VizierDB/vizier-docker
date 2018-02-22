@@ -24,7 +24,7 @@ $ docker build <path/where/dockerfile/is/cloned> --build-arg gituser=<your_vizie
 ```
 
 
-
+##### Note: when running or building this docker image make sure that docker has at minimum 2.2 GB of memory allocated, otherwise it will fail.
 
 
 
