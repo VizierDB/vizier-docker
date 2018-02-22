@@ -4,7 +4,7 @@ ARG gituser
 ARG gitpass
 
 # Metadata
-LABEL base.image="frolvlad/alpine-oraclejdk8:latest"
+LABEL base.image="docker.mimirdb.info/alpine_oraclejdk8"
 LABEL version="0.1"
 LABEL software="Vizier"
 LABEL software.version="0.1.201801"
