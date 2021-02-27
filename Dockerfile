@@ -1,126 +1,67 @@
-FROM docker.mimirdb.info/alpine_oraclejdk8
+FROM alpine:3.12.4
 
-ARG gituser
-ARG gitpass
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
-# Metadata
-LABEL base.image="docker.mimirdb.info/alpine_oraclejdk8"
-LABEL version="0.1"
-LABEL software="Vizier"
-LABEL software.version="0.1.201801"
-LABEL description="an open source, provenance aware, iterative data cleaning tool"
-LABEL website="http://vizierdb.info"
-LABEL sourcecode="https://github.com/VizierDB"
-LABEL documentation="https://github.com/VizierDB/web-api/wiki"
-LABEL tags="CSV,Data Cleaning,Databases,Provenance,Workflow,Machine Learning"
+RUN apk add --no-cache --virtual .build-deps zlib-dev curl binutils \
+    && GLIBC_VER="2.29-r0" \
+    && ALPINE_GLIBC_REPO="https://github.com/sgerrand/alpine-pkg-glibc/releases/download" \
+    && GCC_LIBS_URL="https://archive.archlinux.org/packages/g/gcc-libs/gcc-libs-9.1.0-2-x86_64.pkg.tar.xz" \
+    && GCC_LIBS_SHA256="91dba90f3c20d32fcf7f1dbe91523653018aa0b8d2230b00f822f6722804cf08" \
+    && ZLIB_URL="https://archive.archlinux.org/packages/z/zlib/zlib-1%3A1.2.11-3-x86_64.pkg.tar.xz" \
+    && ZLIB_SHA256=17aede0b9f8baa789c5aa3f358fbf8c68a5f1228c5e6cba1a5dd34102ef4d4e5 \
+    && curl -kLfsS https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub -o /etc/apk/keys/sgerrand.rsa.pub \
+    && SGERRAND_RSA_SHA256="823b54589c93b02497f1ba4dc622eaef9c813e6b0f0ebbb2f771e32adf9f4ef2" \
+    && echo "${SGERRAND_RSA_SHA256} */etc/apk/keys/sgerrand.rsa.pub" | sha256sum -c - \
+    && curl -LfsS ${ALPINE_GLIBC_REPO}/${GLIBC_VER}/glibc-${GLIBC_VER}.apk > /tmp/glibc-${GLIBC_VER}.apk \
+    && apk add --no-cache /tmp/glibc-${GLIBC_VER}.apk \
+    && curl -LfsS ${ALPINE_GLIBC_REPO}/${GLIBC_VER}/glibc-bin-${GLIBC_VER}.apk > /tmp/glibc-bin-${GLIBC_VER}.apk \
+    && apk add --no-cache /tmp/glibc-bin-${GLIBC_VER}.apk \
+    && curl -Ls ${ALPINE_GLIBC_REPO}/${GLIBC_VER}/glibc-i18n-${GLIBC_VER}.apk > /tmp/glibc-i18n-${GLIBC_VER}.apk \
+    && apk add --no-cache /tmp/glibc-i18n-${GLIBC_VER}.apk \
+    && /usr/glibc-compat/bin/localedef --force --inputfile POSIX --charmap UTF-8 "$LANG" || true \
+    && echo "export LANG=$LANG" > /etc/profile.d/locale.sh \
+    && curl -LfsS ${GCC_LIBS_URL} -o /tmp/gcc-libs.tar.xz \
+    && echo "${GCC_LIBS_SHA256} */tmp/gcc-libs.tar.xz" | sha256sum -c - \
+    && mkdir /tmp/gcc \
+    && tar -xf /tmp/gcc-libs.tar.xz -C /tmp/gcc \
+    && mv /tmp/gcc/usr/lib/libgcc* /tmp/gcc/usr/lib/libstdc++* /usr/glibc-compat/lib \
+    && strip /usr/glibc-compat/lib/libgcc_s.so.* /usr/glibc-compat/lib/libstdc++.so* \
+    #&& curl -LfsS ${ZLIB_URL} -o /tmp/libz.tar.xz \
+    #&& echo "${ZLIB_SHA256} */tmp/libz.tar.xz" | sha256sum -c - \
+    && mkdir /tmp/libz \
+    #&& tar -xf /tmp/libz.tar.xz -C /tmp/libz \
+    #&& mv /tmp/libz/usr/lib/libz.so* /usr/glibc-compat/lib \
+    && apk del --purge .build-deps glibc-i18n \
+    && rm -rf /tmp/*.apk /tmp/gcc /tmp/gcc-libs.tar.xz /tmp/libz /tmp/libz.tar.xz /var/cache/apk/* \
+    && apk add --no-cache curl
 
-#VOLUME ["type=volume,source=mimir-vol,target=\/usr\/local\/source\/"]
-#install dependencies and setup directories
-RUN echo "@testing http://dl-4.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories \
- && apk add --update \
-              ca-certificates \
-              musl \
-              build-base \
-              bash \
-              git \
-              python \
-              python-dev \
-              py-pip \
-              gfortran \
-              lapack-dev \
-              libxml2-dev \
-              libxslt-dev \
-              jpeg-dev \
-              libxext \
-              libsm \
-              libxrender \
-              yarn \
-              curl \
-              sed \
- && pip install --upgrade pip \
- && rm /var/cache/apk/* \
- && mkdir /usr/local/source/
+ #install miniconda
+RUN curl -OsL "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" \
+ && /bin/ash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda \
+ && rm Miniconda3-latest-Linux-x86_64.sh \
+ && echo 'export PATH=/opt/conda/bin:$PATH' >> /etc/profile.d/conda.sh 
 
-#install python 2.7
-RUN echo "manylinux1_compatible = True" > /usr/lib/python2.7/_manylinux.py \
- && cd /usr/bin \
- && ln -sf easy_install-2.7 easy_install \
- && ln -sf python2.7 python \
- && ln -sf python2.7-config python-config \
- && ln -sf pip2.7 pip \
- && ln -sf /usr/include/locale.h /usr/include/xlocale.h
+RUN /opt/conda/bin/conda install -c conda-forge pyarrow
+    
+RUN wget https://maven.mimirdb.info/info/vizierdb/vizier; \
+    chmod +x vizier; \
+    mv vizier /usr/bin/;
 
-#install anaconda
-RUN curl -OsL "https://repo.continuum.io/archive/Anaconda2-5.1.0-Linux-x86_64.sh" \
- && /bin/bash Anaconda2-5.1.0-Linux-x86_64.sh -b -p /opt/conda \
- && rm Anaconda2-5.1.0-Linux-x86_64.sh \
- && echo 'export PATH=/opt/conda/bin:$PATH' >> /etc/profile.d/conda.sh
+RUN apk add --no-cache --virtual .build-deps openjdk8 git gcc g++ python3 python3-dev py3-pip geos-dev py3-kiwisolver py3-matplotlib zlib-dev jpeg-dev  
 
-#setup mimir
-RUN curl -sL "https://github.com/sbt/sbt/releases/download/v0.13.15/sbt-0.13.15.tgz" | gunzip | tar -x -C /usr/local/source/ \
- && chmod 0755 /usr/local/source/sbt/bin/sbt \
- && git clone https://github.com/UBOdin/mimir.git /usr/local/source/mimir \
- && cd /usr/local/source/mimir \
- && /usr/local/source/sbt/bin/sbt compile 
- 
-#setup web-ui
-#copy local archive instead of pulling from github
-#COPY web-ui.tgz /usr/local/source/
-#RUN tar -C /usr/local/source/ -zxvf /usr/local/source/web-ui.tgz \
-RUN cd /usr/local/source/ \
- && git clone https://$gituser:$gitpass@github.com/VizierDB/web-ui.git \
- && cd /usr/local/source/web-ui \
- #&& sed -i "s/localhost:5000/$apiserver/g" /usr/local/source/web-ui/public/env.js \
- && yarn install 
+RUN pip3 install cpython setuptools wheel numpy bokeh matplotlib astor pandas shapely;
 
-#setup web-api
-#copy local archive instead of pulling from github
-#COPY web-api.tgz /usr/local/source/
-#RUN tar -C /usr/local/source/ -zxvf /usr/local/source/web-api.tgz \
-RUN cd /usr/local/source/ \
- && git clone https://$gituser:$gitpass@github.com/VizierDB/web-api.git \
- && cd /usr/local/source/web-api \
- && /opt/conda/bin/conda env create -f environment.yml \
- && source /opt/conda/bin/activate vizier \
- && pip install git+https://$gituser:$gitpass@github.com/VizierDB/Vistrails.git \
- && pip install -e .
-
+ENV JAVA_HOME=/opt/java/openjdk \
+    PATH="/opt/java/openjdk/bin:$PATH"
+    
 EXPOSE 5000
-EXPOSE 3000
+EXPOSE 8089
 
-ENV API_SCHEME=http
-ENV API_SERVER=localhost
-ENV API_PORT=5000
-ENV API_LOCAL_PORT=5000
+ENV COURSIER_CACHE=/usr/local/mimir/cache
 
-#write startup scripts
-#mimir
-RUN echo "(cd /usr/local/source/mimir; /usr/local/source/sbt/bin/sbt runMimirVizier -X LOG)" >> /usr/local/source/run_mimir.sh \
- && chmod 0755 /usr/local/source/run_mimir.sh
-#api
-RUN echo "(sleep 40 && cd /usr/local/source/web-api && source /opt/conda/bin/activate vizier && cd vizier && python server.py)" >> /usr/local/source/run_web_api.sh \
- && chmod 0755 /usr/local/source/run_web_api.sh
-#ui
-RUN echo "(sleep 70 && cd /usr/local/source/web-ui && yarn start)" >> /usr/local/source/run_web_ui.sh \
- && chmod 0755 /usr/local/source/run_web_ui.sh
-#rewrite config files
-RUN echo 'sed -i "s/http:\/\/localhost:5000/$API_SCHEME:\/\/$API_SERVER:$API_PORT/g" /usr/local/source/web-ui/public/env.js' >> /usr/local/source/rewrite_configs.sh \
- #rewrite default api config
- && echo 'sed -i "s/http:\/\/localhost/$API_SCHEME:\/\/$API_SERVER/g" /usr/local/source/web-api/config/config-default.yaml' >> /usr/local/source/rewrite_configs.sh \
- && echo 'sed -i "s/server_port: 5000/server_port: $API_PORT/g" /usr/local/source/web-api/config/config-default.yaml' >> /usr/local/source/rewrite_configs.sh \
- && echo 'sed -i "s/server_local_port: 5000/server_local_port: $API_LOCAL_PORT/g" /usr/local/source/web-api/config/config-default.yaml' >> /usr/local/source/rewrite_configs.sh \
- #rewrite mimir api config
- && echo 'sed -i "s/http:\/\/localhost/$API_SCHEME:\/\/$API_SERVER/g" /usr/local/source/web-api/config/config-mimir.yaml' >> /usr/local/source/rewrite_configs.sh \
- && echo 'sed -i "s/server_port: 5000/server_port: $API_PORT/g" /usr/local/source/web-api/config/config-mimir.yaml' >> /usr/local/source/rewrite_configs.sh \
- && echo 'sed -i "s/server_local_port: 5000/server_local_port: $API_LOCAL_PORT/g" /usr/local/source/web-api/config/config-mimir.yaml' >> /usr/local/source/rewrite_configs.sh \
- #rewrite api config
- && echo 'sed -i "s/http:\/\/localhost/$API_SCHEME:\/\/$API_SERVER/g" /usr/local/source/web-api/vizier/config.yaml' >> /usr/local/source/rewrite_configs.sh \
- && echo 'sed -i "s/server_port: 5000/server_port: $API_PORT/g" /usr/local/source/web-api/vizier/config.yaml' >> /usr/local/source/rewrite_configs.sh \
- && echo 'sed -i "s/server_local_port: 5000/server_local_port: $API_LOCAL_PORT/g" /usr/local/source/web-api/vizier/config.yaml' >> /usr/local/source/rewrite_configs.sh \
- && chmod 0755 /usr/local/source/rewrite_configs.sh
-#entrypoint
-RUN echo '/usr/local/source/rewrite_configs.sh && (/usr/local/source/run_mimir.sh & /usr/local/source/run_web_api.sh & /usr/local/source/run_web_ui.sh && fg)' >> /usr/local/source/entrypoint.sh \
- && chmod 0755 /usr/local/source/entrypoint.sh
+RUN mkdir /data
+VOLUME ["/data"]
+ENV USER_DATA_DIR=/data/
 
-ENTRYPOINT ["\/bin\/bash", "-c", "/usr/local/source/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/vizier", "--devel"]
 
