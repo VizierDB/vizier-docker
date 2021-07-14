@@ -2,7 +2,7 @@ FROM alpine:3.12.4
 
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
-RUN apk add --no-cache --virtual .build-deps zlib-dev curl binutils \
+RUN apk add --no-cache --virtual .build-deps zlib-dev curl binutils cmake \
     && GLIBC_VER="2.29-r0" \
     && ALPINE_GLIBC_REPO="https://github.com/sgerrand/alpine-pkg-glibc/releases/download" \
     && GCC_LIBS_URL="https://archive.archlinux.org/packages/g/gcc-libs/gcc-libs-9.1.0-2-x86_64.pkg.tar.xz" \
@@ -49,11 +49,14 @@ RUN wget https://maven.mimirdb.info/info/vizierdb/vizier; \
 
 RUN apk add --no-cache --virtual .build-deps openjdk8 git gcc g++ python3 python3-dev py3-pip geos-dev py3-kiwisolver py3-matplotlib zlib-dev jpeg-dev  
 
-RUN pip3 install cpython setuptools wheel numpy bokeh matplotlib astor pandas shapely;
+RUN pip3 install cpython setuptools wheel numpy bokeh matplotlib astor pandas shapely pyspark;
 
 ENV JAVA_HOME=/opt/java/openjdk \
     PATH="/opt/java/openjdk/bin:$PATH"
-    
+
+# Run vizier to prefetch dependencies
+RUN /usr/bin/vizier --help
+
 EXPOSE 5000
 EXPOSE 8089
 
@@ -63,5 +66,8 @@ RUN mkdir /data
 VOLUME ["/data"]
 ENV USER_DATA_DIR=/data/
 
-ENTRYPOINT ["/usr/bin/vizier", "--devel"]
+# --connect-from-any-host needed, since connections will be coming in over the 
+#   docker virtual network.  Docker controls the localhost port... nothing we
+#   can do about that.
+ENTRYPOINT ["/usr/bin/vizier", "--connect-from-any-host"]
 
