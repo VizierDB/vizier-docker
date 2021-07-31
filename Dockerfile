@@ -42,14 +42,16 @@ RUN curl -OsL "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_6
  && echo 'export PATH=/opt/conda/bin:$PATH' >> /etc/profile.d/conda.sh 
 
 RUN /opt/conda/bin/conda install -c conda-forge pyarrow
-    
-RUN wget https://maven.mimirdb.info/info/vizierdb/vizier; \
-    chmod +x vizier; \
-    mv vizier /usr/bin/;
 
 RUN apk add --no-cache --virtual .build-deps openjdk8 git gcc g++ python3 python3-dev py3-pip geos-dev py3-kiwisolver py3-matplotlib zlib-dev jpeg-dev  
 
 RUN pip3 install cpython setuptools wheel numpy bokeh matplotlib astor pandas shapely pyspark;
+
+ARG CACHE_DATE    
+RUN wget https://maven.mimirdb.info/info/vizierdb/vizier; \
+    chmod +x vizier; \
+    mv vizier /usr/bin/;
+
 
 ENV JAVA_HOME=/opt/java/openjdk \
     PATH="/opt/java/openjdk/bin:$PATH"
