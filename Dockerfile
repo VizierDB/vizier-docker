@@ -33,19 +33,54 @@ RUN apk add --no-cache --virtual .build-deps zlib-dev curl binutils cmake \
     #&& mv /tmp/libz/usr/lib/libz.so* /usr/glibc-compat/lib \
     && apk del --purge .build-deps glibc-i18n \
     && rm -rf /tmp/*.apk /tmp/gcc /tmp/gcc-libs.tar.xz /tmp/libz /tmp/libz.tar.xz /var/cache/apk/* \
-    && apk add --no-cache curl
-
- #install miniconda
-RUN curl -OsL "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" \
- && /bin/ash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda \
- && rm Miniconda3-latest-Linux-x86_64.sh \
- && echo 'export PATH=/opt/conda/bin:$PATH' >> /etc/profile.d/conda.sh 
-
-RUN /opt/conda/bin/conda install -c conda-forge pyarrow
+    && apk add --no-cache curl 
 
 RUN apk add --no-cache --virtual .build-deps openjdk8 git gcc g++ python3 python3-dev py3-pip geos-dev py3-kiwisolver py3-matplotlib zlib-dev jpeg-dev  
 
-RUN pip3 install cpython setuptools wheel numpy bokeh matplotlib astor pandas shapely pyspark;
+RUN pip3 install cpython setuptools wheel numpy bokeh matplotlib astor pandas shapely pyspark 
+
+RUN apk add --no-cache \
+            build-base \
+            cmake \
+            bash \
+            boost-dev \
+            autoconf \
+            zlib-dev \
+            flex \
+            bison
+
+RUN pip install --no-cache-dir six pytest numpy cython
+RUN pip install --no-cache-dir pandas
+
+ARG ARROW_VERSION=0.12.0
+ARG ARROW_SHA1=2ede75769e12df972f0acdfddd53ab15d11e0ac2
+ARG ARROW_BUILD_TYPE=release
+
+ENV ARROW_HOME=/usr/local \
+    PARQUET_HOME=/usr/local
+
+#Download and build apache-arrow
+RUN mkdir /arrow \
+    && apk add --no-cache curl \
+    && curl -o /tmp/apache-arrow.tar.gz -SL https://github.com/apache/arrow/archive/apache-arrow-${ARROW_VERSION}.tar.gz \
+    && echo "$ARROW_SHA1 *apache-arrow.tar.gz" | sha1sum /tmp/apache-arrow.tar.gz \
+    && tar -xvf /tmp/apache-arrow.tar.gz -C /arrow --strip-components 1 \
+    && mkdir -p /arrow/cpp/build \
+    && cd /arrow/cpp/build \
+    && cmake -DCMAKE_BUILD_TYPE=$ARROW_BUILD_TYPE \
+          -DCMAKE_INSTALL_LIBDIR=lib \
+          -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
+          -DARROW_PARQUET=on \
+          -DARROW_PYTHON=on \
+          -DARROW_PLASMA=on \
+          -DARROW_BUILD_TESTS=OFF \
+          .. \
+    && make -j$(nproc) \
+    && make install \
+    && cd /arrow/python \
+    && python3 setup.py build_ext --build-type=$ARROW_BUILD_TYPE --with-parquet \
+    && python3 setup.py install \
+    && rm -rf /arrow /tmp/apache-arrow.tar.gz
 
 ARG CACHE_DATE    
 RUN wget https://maven.mimirdb.info/info/vizierdb/vizier; \
@@ -56,13 +91,13 @@ RUN wget https://maven.mimirdb.info/info/vizierdb/vizier; \
 ENV JAVA_HOME=/opt/java/openjdk \
     PATH="/opt/java/openjdk/bin:$PATH"
 
+ENV COURSIER_CACHE=/usr/local/mimir/cache
+
 # Run vizier to prefetch dependencies
 RUN /usr/bin/vizier --help
 
 EXPOSE 5000
-EXPOSE 8089
 
-ENV COURSIER_CACHE=/usr/local/mimir/cache
 
 RUN mkdir /data
 VOLUME ["/data"]
