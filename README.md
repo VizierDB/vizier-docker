@@ -8,7 +8,7 @@ This image is based on Alpine Linux image - a 5MB image - and contains OpenJDK 8
 By default everything runs on localhost with http scheme. The UI listens on port `5000` in the container and can be mapped to the desired port on the host.  The API server listens on port `8089`.
 
 ```sh
-$ docker run --name vizier-scala -p 5000:5000 -p 8089:8089 vizierdb/vizier
+$ docker run --name vizier-scala -p 5000:5000 -p 8089:8089 okennedy/vizier:latest
 ```
 
 #### Storing your notebooks locally
@@ -17,7 +17,7 @@ Having the notebooks stored in the docker container itself is often not very use
 
 ```sh
 $ mkdir vizier-data
-$ docker run --name vizier --rm -p 5000:5000 -p 8089:8089 -v "$(pwd)"/vizier-data:/vizier.db vizierdb/vizier
+$ docker run --name vizier --rm -p 5000:5000 -p 8089:8089 -v "$(pwd)"/vizier-data:/vizier.db okennedy/vizier:latest
 ```
 
 #### Using a different port on the host
@@ -25,7 +25,7 @@ $ docker run --name vizier --rm -p 5000:5000 -p 8089:8089 -v "$(pwd)"/vizier-dat
 If you already have some other process listening on port 5000, you can tell docker to forward port `5000` from the container to a different port on the host. However, you need to inform Vizier about this too. For example, to forward to port `7000`, do:
 
 ```sh
-$ docker run --name vizier-scala -p 7000:5000 -p 8089:8089 vizierdb/vizier --public-url http://localhost:7000/
+$ docker run --name vizier-scala -p 7000:5000 -p 8089:8089 okennedy/vizier:latest --public-url http://localhost:7000/
 ```
 
 #### Build the image
