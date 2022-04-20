@@ -33,11 +33,11 @@ RUN apk add --no-cache --virtual .build-deps zlib-dev curl binutils cmake \
     #&& mv /tmp/libz/usr/lib/libz.so* /usr/glibc-compat/lib \
     && apk del --purge .build-deps glibc-i18n \
     && rm -rf /tmp/*.apk /tmp/gcc /tmp/gcc-libs.tar.xz /tmp/libz /tmp/libz.tar.xz /var/cache/apk/* \
-    && apk add --no-cache curl 
+    && apk add --no-cache curl
 
-RUN apk add --no-cache --virtual .build-deps openjdk8 git gcc g++ python3 python3-dev py3-pip geos-dev py3-kiwisolver py3-matplotlib zlib-dev jpeg-dev  
+RUN apk add --no-cache --virtual .build-deps openjdk8 git gcc g++ python3 python3-dev py3-pip geos-dev py3-kiwisolver py3-matplotlib zlib-dev jpeg-dev
 
-RUN pip3 install cpython setuptools wheel numpy bokeh matplotlib astor pandas shapely pyspark 
+RUN pip3 install cpython setuptools wheel numpy bokeh matplotlib astor pandas shapely pyspark
 
 RUN apk add --no-cache \
             build-base \
@@ -52,17 +52,19 @@ RUN apk add --no-cache \
 RUN pip install --no-cache-dir six pytest numpy cython
 RUN pip install --no-cache-dir pandas
 
-ARG ARROW_VERSION=0.12.0
-ARG ARROW_SHA1=2ede75769e12df972f0acdfddd53ab15d11e0ac2
+ARG ARROW_VERSION=5.0.0
+ARG ARROW_URL=https://codeload.github.com/apache/arrow/tar.gz/refs/tags/apache-arrow-
+ARG ARROW_SHA1=78fb38f212fa49029aff24c669a39648d9b4e68b
 ARG ARROW_BUILD_TYPE=release
 
 ENV ARROW_HOME=/usr/local \
     PARQUET_HOME=/usr/local
 
-#Download and build apache-arrow
+# Download and build apache-arrow
 RUN mkdir /arrow \
     && apk add --no-cache curl \
-    && curl -o /tmp/apache-arrow.tar.gz -SL https://github.com/apache/arrow/archive/apache-arrow-${ARROW_VERSION}.tar.gz \
+    && curl -o /tmp/apache-arrow.tar.gz -SL ${ARROW_URL}${ARROW_VERSION} \
+    && echo "$ARROW_SHA1" `sha1sum /tmp/apache-arrow.tar.gz` \
     && echo "$ARROW_SHA1 *apache-arrow.tar.gz" | sha1sum /tmp/apache-arrow.tar.gz \
     && tar -xvf /tmp/apache-arrow.tar.gz -C /arrow --strip-components 1 \
     && mkdir -p /arrow/cpp/build \
@@ -73,6 +75,7 @@ RUN mkdir /arrow \
           -DARROW_PARQUET=on \
           -DARROW_PYTHON=on \
           -DARROW_PLASMA=on \
+          -DARROW_WITH_SNAPPY=ON \
           -DARROW_BUILD_TESTS=OFF \
           .. \
     && make -j$(nproc) \
@@ -82,7 +85,7 @@ RUN mkdir /arrow \
     && python3 setup.py install \
     && rm -rf /arrow /tmp/apache-arrow.tar.gz
 
-ARG CACHE_DATE    
+ARG CACHE_DATE
 RUN wget https://maven.mimirdb.info/info/vizierdb/vizier; \
     chmod +x vizier; \
     mv vizier /usr/bin/;
@@ -103,8 +106,7 @@ RUN mkdir /data
 VOLUME ["/data"]
 ENV USER_DATA_DIR=/data/
 
-# --connect-from-any-host needed, since connections will be coming in over the 
+# --connect-from-any-host needed, since connections will be coming in over the
 #   docker virtual network.  Docker controls the localhost port... nothing we
 #   can do about that.
 ENTRYPOINT ["/usr/bin/vizier", "--connect-from-any-host"]
-
