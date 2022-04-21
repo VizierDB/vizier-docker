@@ -109,4 +109,4 @@ ENV USER_DATA_DIR=/data/
 # --connect-from-any-host needed, since connections will be coming in over the
 #   docker virtual network.  Docker controls the localhost port... nothing we
 #   can do about that.
-ENTRYPOINT ["/usr/bin/vizier", "--connect-from-any-host"]
+ENTRYPOINT ["/usr/bin/vizier", "--connect-from-any-host", "-n"]
