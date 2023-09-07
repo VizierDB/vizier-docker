@@ -36,7 +36,7 @@ RUN apk add --no-cache --virtual .build-deps zlib-dev curl binutils cmake \
     && apk add --no-cache curl 
 
 RUN apk add --no-cache --virtual .build-deps openjdk8 git gcc g++ python3 python3-dev py3-pip geos-dev py3-kiwisolver py3-matplotlib zlib-dev jpeg-dev  
-
+RUN python3 -m pip install --upgrade pip
 RUN pip3 install cpython setuptools wheel numpy bokeh matplotlib astor pandas shapely pyspark 
 
 RUN apk add --no-cache \
@@ -47,10 +47,13 @@ RUN apk add --no-cache \
             autoconf \
             zlib-dev \
             flex \
-            bison
+            bison \
+            lynx \
+            w3m \
+            xdg-utils
 
-RUN pip install --no-cache-dir six pytest numpy cython
-RUN pip install --no-cache-dir pandas
+RUN pip install six pytest numpy cython
+RUN pip install pandas
 
 ARG ARROW_VERSION=0.12.0
 ARG ARROW_SHA1=2ede75769e12df972f0acdfddd53ab15d11e0ac2
