@@ -55,7 +55,7 @@ RUN apk add --no-cache \
 RUN pip install six pytest numpy cython
 RUN pip install pandas
 
-ARG ARROW_VERSION=0.12.0
+ARG ARROW_VERSION=13.0.0
 ARG ARROW_SHA1=2ede75769e12df972f0acdfddd53ab15d11e0ac2
 ARG ARROW_BUILD_TYPE=release
 
