@@ -52,7 +52,8 @@ RUN apk add --no-cache \
             w3m \
             xdg-utils
 
-RUN pip install six pytest numpy cython
+RUN pip install six pytest numpy cython==0.29.31
+
 RUN pip install pandas
 
 ARG ARROW_VERSION=13.0.0
